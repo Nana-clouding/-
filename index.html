@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ユーザー掲示板作成システム</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            width: 60%;
+            margin: 20px auto;
+        }
+        .form, .board-form {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+        }
+        .board {
+            padding: 10px;
+            border: 1px solid #ddd;
+            margin-top: 20px;
+        }
+        .comment {
+            padding: 5px;
+            border-bottom: 1px solid #ddd;
+        }
+        .comment img {
+            max-width: 200px;
+            margin-top: 10px;
+        }
+        .comment:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>掲示板作成フォーム</h2>
+    <div class="form">
+        <input type="text" id="boardName" placeholder="掲示板名" required>
+        <br><br>
+        <input type="password" id="boardPassword" placeholder="掲示板パスワード" required>
+        <br><br>
+        <button onclick="createBoard()">掲示板作成</button>
+    </div>
+
+    <h2>掲示板にアクセス</h2>
+    <div class="form">
+        <input type="text" id="accessBoardName" placeholder="掲示板名" required>
+        <br><br>
+        <input type="password" id="accessBoardPassword" placeholder="掲示板パスワード" required>
+        <br><br>
+        <button onclick="accessBoard()">掲示板にアクセス</button>
+    </div>
+
+    <div id="boardSection">
+        <!-- ユーザーが作成した掲示板がここに表示されます -->
+    </div>
+</div>
+
+<script>
+    let boards = [];
+
+    function createBoard() {
+        const boardName = document.getElementById("boardName").value;
+        const boardPassword = document.getElementById("boardPassword").value;
+
+        if (!boardName || !boardPassword) {
+            alert("掲示板名とパスワードを入力してください。");
+            return;
+        }
+
+        // 掲示板オブジェクトを作成
+        const newBoard = {
+            name: boardName,
+            password: boardPassword,
+            comments: []
+        };
+
+        // 掲示板リストに追加
+        boards.push(newBoard);
+
+        alert(`掲示板「${boardName}」が作成されました！`);
+        
+        // フォームをクリア
+        document.getElementById("boardName").value = "";
+        document.getElementById("boardPassword").value = "";
+    }
+
+    function accessBoard() {
+        const accessBoardName = document.getElementById("accessBoardName").value;
+        const accessBoardPassword = document.getElementById("accessBoardPassword").value;
+
+        const board = boards.find(b => b.name === accessBoardName);
+
+        if (!board) {
+            alert("掲示板が見つかりません。掲示板名を確認してください。");
+            return;
+        }
+
+        if (board.password === accessBoardPassword) {
+            displayBoard(board);
+        } else {
+            alert("パスワードが正しくありません。");
+        }
+    }
+
+    function displayBoard(board) {
+        const boardSection = document.getElementById("boardSection");
+        boardSection.innerHTML = ''; // 以前表示された掲示板をクリア
+
+        const boardDiv = document.createElement("div");
+        boardDiv.classList.add("board");
+        boardDiv.innerHTML = `
+            <h3>${board.name}</h3>
+            <div id="commentSection_${board.name}">
+                <input type="text" id="userName_${board.name}" placeholder="名前を入力" required>
+                <br><br>
+                <textarea id="comment_${board.name}" placeholder="コメント"></textarea>
+                <br><br>
+                <input type="file" id="imageUpload_${board.name}" accept="image/*">
+                <br><br>
+                <button onclick="postComment('${board.name}')">コメントを投稿</button>
+                <div id="comments_${board.name}">
+                    <!-- コメントがここに表示されます -->
+                </div>
+            </div>
+        `;
+        boardSection.appendChild(boardDiv);
+        updateComments(board.name);
+    }
+
+    function postComment(boardName) {
+        const board = boards.find(b => b.name === boardName);
+        const userName = document.getElementById(`userName_${boardName}`).value;
+        const commentText = document.getElementById(`comment_${boardName}`).value;
+        const imageFile = document.getElementById(`imageUpload_${boardName}`).files[0];
+
+        if (!userName || !commentText) {
+            alert("名前とコメントを入力してください。");
+            return;
+        }
+
+        const newComment = {
+            user: userName,
+            text: commentText,
+            image: null
+        };
+
+        if (imageFile) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                newComment.image = event.target.result;
+                board.comments.push(newComment);
+                updateComments(boardName);
+            }
+            reader.readAsDataURL(imageFile);
+        } else {
+            board.comments.push(newComment);
+            updateComments(boardName);
+        }
+
+        // フォームをクリア
+        document.getElementById(`userName_${boardName}`).value = "";
+        document.getElementById(`comment_${boardName}`).value = "";
+        document.getElementById(`imageUpload_${boardName}`).value = "";
+    }
+
+    function updateComments(boardName) {
+        const board = boards.find(b => b.name === boardName);
+        const commentsDiv = document.getElementById(`comments_${boardName}`);
+
+        // コメントをクリア
+        commentsDiv.innerHTML = "";
+
+        // コメントを表示
+        board.comments.forEach(comment => {
+            const commentDiv = document.createElement("div");
+            commentDiv.classList.add("comment");
+            commentDiv.innerHTML = `<strong>${comment.user}</strong>: ${comment.text}`;
+            if (comment.image) {
+                const img = document.createElement("img");
+                img.src = comment.image;
+                commentDiv.appendChild(img);
+            }
+            commentsDiv.appendChild(commentDiv);
+        });
+    }
+</script>
+
+</body>
+</html>
