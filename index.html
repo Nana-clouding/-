@@ -3,193 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ユーザー掲示板作成システム</title>
+    <title>Firebase掲示板</title>
     <style>
         body {
             font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f7f7f7;
         }
-        .container {
-            width: 60%;
-            margin: 20px auto;
+        h1 {
+            text-align: center;
         }
-        .form, .board-form {
-            margin-bottom: 20px;
+        .post-form {
+            margin-bottom: 30px;
+        }
+        .post-form input, .post-form textarea {
+            width: 100%;
             padding: 10px;
-            border: 1px solid #ddd;
-            background-color: #f9f9f9;
+            margin: 10px 0;
+            box-sizing: border-box;
         }
-        .board {
-            padding: 10px;
-            border: 1px solid #ddd;
-            margin-top: 20px;
+        .post-form button {
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
         }
-        .comment {
-            padding: 5px;
-            border-bottom: 1px solid #ddd;
+        .posts {
+            margin-top: 30px;
         }
-        .comment img {
-            max-width: 200px;
-            margin-top: 10px;
+        .post {
+            background-color: white;
+            padding: 20px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
-        .comment:last-child {
-            border-bottom: none;
+        .post img {
+            max-width: 100%;
+            height: auto;
         }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>掲示板作成フォーム</h2>
-    <div class="form">
-        <input type="text" id="boardName" placeholder="掲示板名" required>
-        <br><br>
-        <input type="password" id="boardPassword" placeholder="掲示板パスワード" required>
-        <br><br>
-        <button onclick="createBoard()">掲示板作成</button>
-    </div>
+<h1>Firebase掲示板</h1>
 
-    <h2>掲示板にアクセス</h2>
-    <div class="form">
-        <input type="text" id="accessBoardName" placeholder="掲示板名" required>
-        <br><br>
-        <input type="password" id="accessBoardPassword" placeholder="掲示板パスワード" required>
-        <br><br>
-        <button onclick="accessBoard()">掲示板にアクセス</button>
-    </div>
-
-    <div id="boardSection">
-        <!-- ユーザーが作成した掲示板がここに表示されます -->
-    </div>
+<div class="post-form">
+    <input type="text" id="username" placeholder="名前を入力" required>
+    <textarea id="message" placeholder="メッセージを入力" required></textarea>
+    <input type="text" id="imageUrl" placeholder="画像URLを入力 (任意)">
+    <button onclick="submitPost()">投稿</button>
 </div>
 
-<script>
-    let boards = [];
+<div class="posts" id="posts"></div>
 
-    function createBoard() {
-        const boardName = document.getElementById("boardName").value;
-        const boardPassword = document.getElementById("boardPassword").value;
+<!-- Firebase SDK -->
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+  import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-database.js";
 
-        if (!boardName || !boardPassword) {
-            alert("掲示板名とパスワードを入力してください。");
-            return;
-        }
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyCXVKtN_ndAqLVhnF1c6GSdDpVgMCiIDnU",
+    authDomain: "keijiban-free.firebaseapp.com",
+    databaseURL: "https://keijiban-free-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "keijiban-free",
+    storageBucket: "keijiban-free.appspot.com",
+    messagingSenderId: "830980234962",
+    appId: "1:830980234962:web:45292491feee59cfd1970b",
+    measurementId: "G-HP7ZZYT8KB"
+  };
 
-        // 掲示板オブジェクトを作成
-        const newBoard = {
-            name: boardName,
-            password: boardPassword,
-            comments: []
-        };
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const database = getDatabase(app);
 
-        // 掲示板リストに追加
-        boards.push(newBoard);
+  function submitPost() {
+      const username = document.getElementById('username').value;
+      const message = document.getElementById('message').value;
+      const imageUrl = document.getElementById('imageUrl').value;
 
-        alert(`掲示板「${boardName}」が作成されました！`);
-        
-        // フォームをクリア
-        document.getElementById("boardName").value = "";
-        document.getElementById("boardPassword").value = "";
-    }
+      if (username === '' || message === '') {
+          alert('名前とメッセージを入力してください。');
+          return;
+      }
 
-    function accessBoard() {
-        const accessBoardName = document.getElementById("accessBoardName").value;
-        const accessBoardPassword = document.getElementById("accessBoardPassword").value;
+      const postRef = push(ref(database, 'posts'));
+      postRef.set({
+          username,
+          message,
+          imageUrl,
+          timestamp: new Date().toLocaleString()
+      });
 
-        const board = boards.find(b => b.name === accessBoardName);
+      clearForm();
+  }
 
-        if (!board) {
-            alert("掲示板が見つかりません。掲示板名を確認してください。");
-            return;
-        }
+  function loadPosts() {
+      const postsRef = ref(database, 'posts');
+      onChildAdded(postsRef, (data) => {
+          const post = data.val();
+          addPostToDOM(post);
+      });
+  }
 
-        if (board.password === accessBoardPassword) {
-            displayBoard(board);
-        } else {
-            alert("パスワードが正しくありません。");
-        }
-    }
+  function addPostToDOM(post) {
+      const postsDiv = document.getElementById('posts');
+      const postDiv = document.createElement('div');
+      postDiv.classList.add('post');
+      
+      const postHTML = `
+          <p><strong>${post.username}</strong> (${post.timestamp})</p>
+          <p>${post.message}</p>
+          ${post.imageUrl ? `<img src="${post.imageUrl}" alt="投稿画像">` : ''}
+      `;
+      postDiv.innerHTML = postHTML;
+      postsDiv.appendChild(postDiv);
+  }
 
-    function displayBoard(board) {
-        const boardSection = document.getElementById("boardSection");
-        boardSection.innerHTML = ''; // 以前表示された掲示板をクリア
+  function clearForm() {
+      document.getElementById('username').value = '';
+      document.getElementById('message').value = '';
+      document.getElementById('imageUrl').value = '';
+  }
 
-        const boardDiv = document.createElement("div");
-        boardDiv.classList.add("board");
-        boardDiv.innerHTML = `
-            <h3>${board.name}</h3>
-            <div id="commentSection_${board.name}">
-                <input type="text" id="userName_${board.name}" placeholder="名前を入力" required>
-                <br><br>
-                <textarea id="comment_${board.name}" placeholder="コメント"></textarea>
-                <br><br>
-                <input type="file" id="imageUpload_${board.name}" accept="image/*">
-                <br><br>
-                <button onclick="postComment('${board.name}')">コメントを投稿</button>
-                <div id="comments_${board.name}">
-                    <!-- コメントがここに表示されます -->
-                </div>
-            </div>
-        `;
-        boardSection.appendChild(boardDiv);
-        updateComments(board.name);
-    }
+  // Initialize the posts loading
+  loadPosts();
 
-    function postComment(boardName) {
-        const board = boards.find(b => b.name === boardName);
-        const userName = document.getElementById(`userName_${boardName}`).value;
-        const commentText = document.getElementById(`comment_${boardName}`).value;
-        const imageFile = document.getElementById(`imageUpload_${boardName}`).files[0];
-
-        if (!userName || !commentText) {
-            alert("名前とコメントを入力してください。");
-            return;
-        }
-
-        const newComment = {
-            user: userName,
-            text: commentText,
-            image: null
-        };
-
-        if (imageFile) {
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                newComment.image = event.target.result;
-                board.comments.push(newComment);
-                updateComments(boardName);
-            }
-            reader.readAsDataURL(imageFile);
-        } else {
-            board.comments.push(newComment);
-            updateComments(boardName);
-        }
-
-        // フォームをクリア
-        document.getElementById(`userName_${boardName}`).value = "";
-        document.getElementById(`comment_${boardName}`).value = "";
-        document.getElementById(`imageUpload_${boardName}`).value = "";
-    }
-
-    function updateComments(boardName) {
-        const board = boards.find(b => b.name === boardName);
-        const commentsDiv = document.getElementById(`comments_${boardName}`);
-
-        // コメントをクリア
-        commentsDiv.innerHTML = "";
-
-        // コメントを表示
-        board.comments.forEach(comment => {
-            const commentDiv = document.createElement("div");
-            commentDiv.classList.add("comment");
-            commentDiv.innerHTML = `<strong>${comment.user}</strong>: ${comment.text}`;
-            if (comment.image) {
-                const img = document.createElement("img");
-                img.src = comment.image;
-                commentDiv.appendChild(img);
-            }
-            commentsDiv.appendChild(commentDiv);
-        });
-    }
 </script>
 
 </body>
